@@ -1,0 +1,6 @@
+visEffect.c:33:10:Wheel	0	static
+visEffect.c:49:6:visRainbow	24	static
+visEffect.c:70:6:visDots	24	static
+visEffect.c:104:6:visHandle2	8	static
+visEffect.c:133:6:visInit	8	static
+visEffect.c:151:6:visHandle	8	static
