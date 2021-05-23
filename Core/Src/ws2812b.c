@@ -58,119 +58,6 @@ const uint8_t gammaTable[] = {
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255
 };
 
-//static void ws2812b_gpio_init(void)
-//{
-//	// WS2812B outputs
-//	WS2812B_GPIO_CLK_ENABLE();
-//	GPIO_InitTypeDef  GPIO_InitStruct;
-//	GPIO_InitStruct.Pin       = WS2812B_PINS;
-//	GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
-//	GPIO_InitStruct.Alternate = GPIO_AF2_TIM2;
-//	GPIO_InitStruct.Pull      = GPIO_NOPULL;
-//	GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
-//	HAL_GPIO_Init(WS2812B_PORT, &GPIO_InitStruct);
-//
-//	// Enable output pins for debuging to see DMA Full and Half transfer interrupts
-//	#if defined(LED4_PORT) && defined(LED5_PORT)
-//		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-//		GPIO_InitStruct.Pull = GPIO_NOPULL;
-//		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-//
-//		GPIO_InitStruct.Pin = LED4_PIN;
-//		HAL_GPIO_Init(LED4_PORT, &GPIO_InitStruct);
-//		GPIO_InitStruct.Pin = LED5_PIN;
-//		HAL_GPIO_Init(LED5_PORT, &GPIO_InitStruct);
-//	#endif
-//}
-
-//static void tim2_init(void)
-//{
-//	// TIM2 Periph clock enable
-//	__HAL_RCC_TIM2_CLK_ENABLE();
-//
-//	// This computation of pulse length should work ok,
-//	// at some slower core speeds it needs some tuning.
-//	timer_period =  SystemCoreClock / 800000; // 0,125us period (10 times lower the 1,25us period to have fixed math below)
-//
-//	uint32_t logic_0 = (10 * timer_period) / 36;
-//	uint32_t logic_1 = (10 * timer_period) / 15;
-//
-//	if(logic_0 > 255 || logic_1 > 255)
-//	{
-//		// Error, compare_pulse_logic_0 or compare_pulse_logic_1 needs to be redefined to uint16_t (but it takes more memory)
-//		for(;;);
-//	}
-//
-//	compare_pulse_logic_0 = logic_0;
-//	compare_pulse_logic_1 = logic_1;
-//
-//	timer2_handle.Instance = TIM2;
-//	timer2_handle.Init.Period            = timer_period;
-//	timer2_handle.Init.Prescaler         = 0x00;
-//	timer2_handle.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-//	timer2_handle.Init.CounterMode       = TIM_COUNTERMODE_UP;
-//	HAL_TIM_PWM_Init(&timer2_handle);
-//
-//	HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
-//	HAL_NVIC_EnableIRQ(TIM2_IRQn);
-//
-//	timer2_oc1.OCMode       = TIM_OCMODE_PWM1;
-//	timer2_oc1.OCPolarity   = TIM_OCPOLARITY_HIGH;
-//	timer2_oc1.Pulse        = compare_pulse_logic_0;
-//	timer2_oc1.OCFastMode   = TIM_OCFAST_DISABLE;
-//	HAL_TIM_PWM_ConfigChannel(&timer2_handle, &timer2_oc1, TIM_CHANNEL_1);
-//
-//	HAL_TIM_PWM_Start(&timer2_handle, TIM_CHANNEL_1);
-//
-//	(&timer2_handle)->Instance->DCR = TIM_DMABASE_CCR1 | TIM_DMABURSTLENGTH_1TRANSFER;
-//
-//}
-
-
-//DMA_HandleTypeDef     dmaUpdate;
-
-
-//static void dma_init(void)
-//{
-//
-//	// TIM2 Update event - Channel 2
-//	__HAL_RCC_DMA1_CLK_ENABLE();
-//
-//	dmaUpdate.Init.Direction = DMA_MEMORY_TO_PERIPH;
-//	dmaUpdate.Init.PeriphInc = DMA_PINC_DISABLE;
-//	dmaUpdate.Init.MemInc = DMA_MINC_ENABLE;
-//	dmaUpdate.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-//	dmaUpdate.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-//	dmaUpdate.Init.Mode = DMA_CIRCULAR;
-//	dmaUpdate.Init.Priority = DMA_PRIORITY_VERY_HIGH;
-//	dmaUpdate.Instance = DMA1_Channel2;
-//	dmaUpdate.Init.Request = DMA_REQUEST_8;
-//
-//	dmaUpdate.XferCpltCallback  = dma_transfer_complete_handler;
-//	dmaUpdate.XferHalfCpltCallback = dma_transfer_half_handler;
-//
-//    __HAL_LINKDMA(&timer2_handle, hdma[TIM_DMA_ID_UPDATE], dmaUpdate);
-//
-//	HAL_DMA_Init(&dmaUpdate);
-//
-//
-//	HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0, 0);
-//	HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
-//	//HAL_DMA_Start_IT(&dmaUpdate, (uint32_t)timDmaTest, (uint32_t)&(&Tim2Handle)->Instance->DMAR, 4);
-//	HAL_DMA_Start_IT(&dmaUpdate, (uint32_t)dma_bit_buffer, (uint32_t)&TIM2->CCR1, BUFFER_SIZE);
-//
-//}
-
-
-
-//void DMA1_Channel2_3_IRQHandler(void)
-//{
-//  // Check the interrupt and clear flag
-//  HAL_DMA_IRQHandler(&dmaUpdate);
-//}
-
-
-
 static void load_next_framebuffer_data(ws2812b_buffer_item_t *buffer_item, uint32_t row)
 {
 
@@ -206,7 +93,8 @@ static void ws2812b_send()
 
 
 	// clear all DMA flags
-	__HAL_DMA_CLEAR_FLAG(&hdma_tim2_ch3, DMA_FLAG_TC2 | DMA_FLAG_HT2 | DMA_FLAG_TE2);
+	// modify clear flag to clear channel 1?
+	__HAL_DMA_CLEAR_FLAG(&hdma_tim2_ch3, DMA_FLAG_TC1 | DMA_FLAG_HT1 | DMA_FLAG_TE1);
 
 	// configure the number of bytes to be transferred by the DMA controller
 	hdma_tim2_ch3.Instance->CNDTR = BUFFER_SIZE;
@@ -217,9 +105,6 @@ static void ws2812b_send()
 	// enable DMA channels
 	__HAL_DMA_ENABLE(&hdma_tim2_ch3);
 
-	// start DMA
-	HAL_DMA_Start_IT(&hdma_tim2_ch3, (uint32_t)dma_bit_buffer, (uint32_t)&TIM2->CCR3, BUFFER_SIZE);
-
 	// IMPORTANT: enable the TIM2 DMA requests AFTER enabling the DMA channels!
 	__HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_UPDATE);
 
@@ -227,7 +112,7 @@ static void ws2812b_send()
 	TIM2->CNT = timer_period;
 
 	// Set zero length for first pulse because the first bit loads after first TIM_UP
-	TIM2->CCR1 = 0;
+	TIM2->CCR3 = 0;
 
 	// Enable PWM
 	//(&timer2_handle)->Instance->CCMR1 &= ~((1 << 4) | (1 << 5));
@@ -289,8 +174,9 @@ void dma_transfer_complete_handler(DMA_HandleTypeDef *dma_handle)
 		ws2812b.repeat_counter = 0;
 
 		// Disable PWM output
-		(&htim2)->Instance->CCMR1 &= ~((1 << 4) | (1 << 5));
-		(&htim2)->Instance->CCMR1 |= (1 << 6);
+		// change CCMR1 to CCMR2
+		(&htim2)->Instance->CCMR2 &= ~((1 << 4) | (1 << 5));
+		(&htim2)->Instance->CCMR2 |= (1 << 6);
 
 
 
@@ -317,19 +203,24 @@ void dma_transfer_complete_handler(DMA_HandleTypeDef *dma_handle)
 	#endif
 }
 
-
-//void TIM2_IRQHandler(void)
-//{
-//	HAL_TIM_IRQHandler(&htim2);
-//}
-
 // TIM2 Interrupt Handler gets executed on every TIM2 Update if enabled
-void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+/*
+ * two options here: HAL_TIM_PeriodElapsedCallback and HAL_TIM_PWM_PulseFinishedCallback
+ *
+ * If I recall correctly: HAL_TIM_PeriodElapsedCallback is called when the timer reaches the value stored
+ * in the 'reload register' (This is when the timer 'updates' and determines the frequency of your PWM
+ * signal) As TDK has said above HAL_TIM_PWM_PulseFinishedCallback is called when the timer reaches the
+ * pulse value stored in the C&C register. This is responsible for your duty cycle. Don't foget that if
+ * you want HAL_TIM_PeriodElapsedCallback, you must call HAL_TIM_Base_Start_IT and if you want
+ * HAL_TIM_PWM_PulseFinishedCallback, you must call HAL_TIM_PWM_Start_IT. To have both callbacks you must
+ * call both 'start' functions.
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 
-//#if defined(LED5_PORT)
-//		LED5_PORT->BSRR = LED5_PIN;
-//	#endif
+#if defined(LED5_PORT)
+		LED5_PORT->BSRR = LED5_PIN;
+	#endif
 
 	// I have to wait 50us to generate Treset signal
 	if (ws2812b.timer_period_counter < (uint8_t)WS2812_RESET_PERIOD)
@@ -353,9 +244,9 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 		ws2812b.transfer_complete = 1;
 	}
 
-//#if defined(LED5_PORT)
-//		LED5_PORT->BRR = LED5_PIN;
-//	#endif
+#if defined(LED5_PORT)
+		LED5_PORT->BRR = LED5_PIN;
+	#endif
 
 }
 
@@ -467,7 +358,7 @@ void ws2812b_init()
 //	ws2812b_gpio_init();
 //	dma_init();
 //	tim2_init();
-//	  HAL_DMA_Start_IT(&hdma_tim2_ch3, (uint32_t)dma_bit_buffer, (uint32_t)&TIM2->CCR3, BUFFER_SIZE);
+	  HAL_DMA_Start_IT(&hdma_tim2_ch3, (uint32_t)dma_bit_buffer, (uint32_t)&TIM2->CCR3, BUFFER_SIZE);
 //	HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_3, (uint32_t *)dma_bit_buffer, BUFFER_SIZE);
 	// Need to start the first transfer
 	ws2812b.transfer_complete = 1;

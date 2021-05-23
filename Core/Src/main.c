@@ -66,8 +66,6 @@ int main(void)
 
   while (1)
   {
-//	  WS2812_send();
-//	  ws2812b_handle();
 	  visHandle();
   }
 }
@@ -269,11 +267,20 @@ static void MX_TIM2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM2_Init 2 */
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 
 	(&htim2)->Instance->DCR = TIM_DMABASE_CCR3 | TIM_DMABURSTLENGTH_1TRANSFER;
 	// enable DMA interrupts for TIM2
 	(&htim2)->Instance->DIER |= (1 << 3) | (1 << 11); // 3 = CC3IE, 11 = CC3DE
+
+  // configure registers before starting the PWM?
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+	  // needed for period elapsed callback
+	  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	// if there is a ccr match, the CCxIF register needs to be cleared by software
 
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
