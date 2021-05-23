@@ -20,10 +20,19 @@
 #include "main.h"
 #include <math.h>
 #include "ws2812b.h"
+#include "visEffect.h"
 
 #define MAX_LED 8
 #define USE_BRIGHTNESS 1
 #define PI 3.14159265
+
+// DEBUG OUTPUT
+// ********************
+#define LED4_PORT GPIOA
+#define LED4_PIN GPIO_PIN_4
+
+#define LED5_PORT GPIOA
+#define LED5_PIN GPIO_PIN_5
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -38,77 +47,9 @@ static void MX_TIM1_Init(void);
 static void MX_USART1_UART_Init(void);
 
 int datasentflag=0;
-//uint8_t LED_Data[MAX_LED][4];
-//uint8_t LED_Mod[MAX_LED][4];  // for brightness
 uint32_t timer_period;
 uint8_t compare_pulse_logic_0;
 uint8_t compare_pulse_logic_1;
-
-//void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
-//{
-//	HAL_TIM_PWM_Stop_DMA(htim, TIM_CHANNEL_3);
-//	datasentflag = 1;
-//}
-
-//uint16_t pwmData[(24*MAX_LED)+50];
-//uint16_t pwmData[(24)];
-//#define BUFFER_SIZE		(sizeof(pwmData)/sizeof(uint16_t))
-
-/**
-  * @brief Old WS2812 Data Transmission
-  * @retval None
-  */
-//void WS2812_send(void)
-//{
-//	uint32_t color = 0xFF0000; // originally 0x347235
-//	for (int i=23; i>=0; i--)
-//	{
-//		if (color&(1<<i))
-//		{
-//			pwmData[i] = 66;
-//		}
-//		else pwmData[i] = 33;
-//	}
-//
-//	HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_3, (uint32_t *)pwmData, BUFFER_SIZE);
-//	while (!datasentflag){};
-//	datasentflag = 0;
-//}
-
-/**
-  * @brief WS2812 Data Transmission
-  * @retval None
-  */
-//void WS2812_set_led(int LEDnum, int Red, int Green, int Blue)
-//{
-//	LED_Data[LEDnum][0] = LEDnum;
-//	LED_Data[LEDnum][1] = Green;
-//	LED_Data[LEDnum][2] = Red;
-//	LED_Data[LEDnum][3] = Blue;
-//}
-
-/**
-  * @brief WS2812 Data Transmission
-  * @retval None
-  */
-//void WS2812_set_brightness (int brightness)  // 0-45
-//{
-//#if USE_BRIGHTNESS
-//	if (brightness > 45) brightness = 45;
-//
-//	for (int i=0; i<MAX_LED; i++)
-//	{
-//		LED_Mod[i][0] = LED_Data[i][0];
-//		for (int j=1; j<4; j++)
-//		{
-//			float angle = 90-brightness;  // in degrees
-//			angle = angle*PI / 180;  // in rad
-//			LED_Mod[i][j] = (LED_Data[i][j])/(tan(angle));
-//		}
-//	}
-//#endif
-//
-//}
 
 int main(void)
 {
@@ -276,7 +217,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 100-1;
+  htim2.Init.Period = 115; // this value should be 100 but apparently 115
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -303,10 +244,10 @@ static void MX_TIM2_Init(void)
    * This logic calculates the timer period from the system clock. The result will be two values to be used in the
    * pulse changing logic
    */
-	timer_period =  SystemCoreClock / 800000; // 0,125us period (10 times lower the 1,25us period to have fixed math below)
+	timer_period =  (SystemCoreClock / 800000) + 15; // 0,125us period (10 times lower the 1,25us period to have fixed math below)
 
-	uint32_t logic_0 = (10 * timer_period) / 36; // originally 36
-	uint32_t logic_1 = (10 * timer_period) / 15; // originally 15
+	uint32_t logic_0 = (10 * timer_period) / 26; // originally 36
+	uint32_t logic_1 = (10 * timer_period) / 6; // originally 15
 
 	if(logic_0 > 255 || logic_1 > 255)
 	{
@@ -330,7 +271,10 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 
-	(&htim2)->Instance->DCR = TIM_DMABASE_CCR1 | TIM_DMABURSTLENGTH_1TRANSFER;
+	(&htim2)->Instance->DCR = TIM_DMABASE_CCR3 | TIM_DMABURSTLENGTH_1TRANSFER;
+	// enable DMA interrupts for TIM2
+	(&htim2)->Instance->DIER |= (1 << 3) | (1 << 11); // 3 = CC3IE, 11 = CC3DE
+
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
 }
@@ -409,6 +353,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF3_USART2;
   HAL_GPIO_Init(VCP_RX_GPIO_Port, &GPIO_InitStruct);
 
+	// Enable output pins for debuging to see DMA Full and Half transfer interrupts
+#if defined(LED4_PORT) && defined(LED5_PORT)
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+
+	GPIO_InitStruct.Pin = LED4_PIN;
+	HAL_GPIO_Init(LED4_PORT, &GPIO_InitStruct);
+	GPIO_InitStruct.Pin = LED5_PIN;
+	HAL_GPIO_Init(LED5_PORT, &GPIO_InitStruct);
+#endif
 }
 
 /* USER CODE BEGIN 4 */

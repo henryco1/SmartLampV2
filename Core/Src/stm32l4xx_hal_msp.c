@@ -129,17 +129,16 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     hdma_tim2_ch3.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_tim2_ch3.Init.Mode = DMA_CIRCULAR;
     hdma_tim2_ch3.Init.Priority = DMA_PRIORITY_HIGH;
+
+    hdma_tim2_ch3.XferCpltCallback  = dma_transfer_complete_handler;
+    hdma_tim2_ch3.XferHalfCpltCallback = dma_transfer_half_handler;
+
     if (HAL_DMA_Init(&hdma_tim2_ch3) != HAL_OK)
     {
       Error_Handler();
     }
 
     __HAL_LINKDMA(htim_base,hdma[TIM_DMA_ID_CC3],hdma_tim2_ch3);
-
-  /* USER CODE BEGIN TIM2_MspInit 1 */
-    hdma_tim2_ch3.XferCpltCallback  = dma_transfer_complete_handler;
-    hdma_tim2_ch3.XferHalfCpltCallback = dma_transfer_half_handler;
-  /* USER CODE END TIM2_MspInit 1 */
   }
 
 }

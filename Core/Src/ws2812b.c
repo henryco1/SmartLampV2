@@ -217,11 +217,14 @@ static void ws2812b_send()
 	// enable DMA channels
 	__HAL_DMA_ENABLE(&hdma_tim2_ch3);
 
+	// start DMA
+	HAL_DMA_Start_IT(&hdma_tim2_ch3, (uint32_t)dma_bit_buffer, (uint32_t)&TIM2->CCR3, BUFFER_SIZE);
+
 	// IMPORTANT: enable the TIM2 DMA requests AFTER enabling the DMA channels!
 	__HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_UPDATE);
 
 	// debugger says that this operation is 100-1 = 99
-	TIM2->CNT = timer_period-1;
+	TIM2->CNT = timer_period;
 
 	// Set zero length for first pulse because the first bit loads after first TIM_UP
 	TIM2->CCR1 = 0;
@@ -464,7 +467,8 @@ void ws2812b_init()
 //	ws2812b_gpio_init();
 //	dma_init();
 //	tim2_init();
-
+//	  HAL_DMA_Start_IT(&hdma_tim2_ch3, (uint32_t)dma_bit_buffer, (uint32_t)&TIM2->CCR3, BUFFER_SIZE);
+//	HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_3, (uint32_t *)dma_bit_buffer, BUFFER_SIZE);
 	// Need to start the first transfer
 	ws2812b.transfer_complete = 1;
 }
